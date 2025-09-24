@@ -2,6 +2,8 @@
 using Blockchain.Core.Models;
 using Blockchain.Core.Services;
 using Microsoft.AspNetCore.Mvc;
+using System.Net.Http;
+using WebAPI.Requests;
 
 namespace WebAPI.Controllers
 {
@@ -10,12 +12,15 @@ namespace WebAPI.Controllers
     public class BlockchainController : ControllerBase
     {
         private readonly BlockchainService _blockchainService;
-        private static List<Transaction> mempool = new List<Transaction>();
-        private static string nodeIdentifier = Guid.NewGuid().ToString().Replace("-", "");
+        private readonly IHttpClientFactory _httpClientFactory;
 
-        public BlockchainController(BlockchainService blockchainService)
+        private static string nodeIdentifier = Guid.NewGuid().ToString().Replace("-", "");
+        private static List<Transaction> mempool = new List<Transaction>();
+
+        public BlockchainController(BlockchainService blockchainService, IHttpClientFactory httpClientFactory)
         {
             _blockchainService = blockchainService;
+            _httpClientFactory = httpClientFactory;
         }
 
         [HttpPost("transactions/new")]
@@ -58,6 +63,45 @@ namespace WebAPI.Controllers
             {
                 chain,
                 length = chain.Count
+            });
+        }
+
+        [HttpPost("nodes/register")]
+        public IActionResult RegisterNodes([FromBody] RegisterNodesRequest req)
+        {
+            if (req?.nodes == null || req.nodes.Count == 0)
+                return BadRequest("Error: Please supply a valid list of nodes");
+
+            foreach (var node in req.nodes)
+                _blockchainService.RegisterNode(node);
+
+            return StatusCode(201, new
+            {
+                message = "New nodes have been added",
+                total_nodes = _blockchainService.Nodes.ToList()
+            });
+        }
+
+        [HttpGet("nodes/resolve")]
+        public async Task<IActionResult> Resolve()
+        {
+            var replaced = await _blockchainService.ResolveConflictsAsync(_httpClientFactory);
+
+            if (replaced)
+            {
+                return Ok(new
+                {
+                    message = "Our chain was replaced",
+                    new_chain = _blockchainService.Chain,
+                    length = _blockchainService.Chain.Count
+                });
+            }
+
+            return Ok(new
+            {
+                message = "Our chain is authoritative",
+                chain = _blockchainService.Chain,
+                length = _blockchainService.Chain.Count
             });
         }
     }

@@ -1,11 +1,6 @@
 ﻿using Blockchain.Core.Interfaces;
 using Blockchain.Core.Models;
-using Microsoft.Win32.SafeHandles;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Net.Http.Json;
 
 namespace Blockchain.Core.Services
 {
@@ -14,6 +9,9 @@ namespace Blockchain.Core.Services
         private readonly IHashService _hash;
         private readonly IProofOfWork _pow;
         private readonly IBlockRepository _block;
+
+        private readonly HashSet<string> _nodes = new(StringComparer.OrdinalIgnoreCase);
+        public IReadOnlyCollection<string> Nodes => _nodes;
 
         public BlockchainService(IHashService hash, IProofOfWork pow, IBlockRepository block)
         {
@@ -69,5 +67,93 @@ namespace Blockchain.Core.Services
         }
 
         public string Hash(Block block) => _hash.CoputeHex(block.ToCanonical());
+
+        public void RegisterNode(string address)
+        {
+            if (string.IsNullOrWhiteSpace(address)) return;
+
+            if (Uri.TryCreate(address, UriKind.Absolute, out var abs))
+            {
+                if (abs.Port <= 0) return;
+                _nodes.Add($"{abs.Host}:{abs.Port}");
+            }
+            else
+            {
+                var s = address.Trim().TrimEnd('/');
+                if (!s.Contains(":")) return;
+                _nodes.Add(s);
+            }
+        }
+
+        public bool ValidChain(IList<Block> chain)
+        {
+            if (chain == null || chain.Count == 0) return false;
+
+            for (int i = 1; i < chain.Count; i++)
+            {
+                var prev = chain[i - 1];
+                var curr = chain[i];
+
+                var prevHash = _hash.CoputeHex(prev.ToCanonical());
+                if (!string.Equals(curr.PreviousHash, prevHash, StringComparison.OrdinalIgnoreCase))
+                    return false;
+
+                if (!_pow.IsValid(prev.Proof, curr.Proof))
+                    return false;
+            }
+            return true;
+        }
+
+        public async Task<bool> ResolveConflictsAsync(IHttpClientFactory httpClientFactory)
+        {
+            if (_nodes.Count == 0) return false;
+
+            var client = httpClientFactory.CreateClient();
+            var maxLength = Chain.Count;
+            List<Block>? newChain = null;
+
+            foreach (var node in _nodes)
+            {
+                try
+                {
+                    var url = $"http://{node}/blockchain/chain";
+                    using var resp = await client.GetAsync(url);
+                    if (!resp.IsSuccessStatusCode) continue;
+
+                    var dto = await resp.Content.ReadFromJsonAsync<Chain>();
+                    if (dto is null || dto.chain is null) continue;
+
+                    var foreignChain = dto.chain;
+                    var foreignLen = dto.length;
+
+                    if (foreignLen > maxLength && ValidChain(foreignChain))
+                    {
+                        maxLength = foreignLen;
+                        newChain = foreignChain;
+                    }
+                }
+                catch
+                {
+                }
+            }
+
+            if (newChain != null)
+            {
+                var current = _block.GetChain();
+                if (current is List<Block> list)
+                {
+                    list.Clear();
+                    list.AddRange(newChain);
+                }
+                else
+                {
+                    foreach (var b in newChain.Skip(current.Count))
+                        _block.Append(b);
+                }
+                return true;
+            }
+
+            return false;
+        }
     }
 }
