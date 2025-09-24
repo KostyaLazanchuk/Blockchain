@@ -1,8 +1,6 @@
-﻿using Blockchain.Core.Infrastructure;
-using Blockchain.Core.Models;
+﻿using Blockchain.Core.Models;
 using Blockchain.Core.Services;
 using Microsoft.AspNetCore.Mvc;
-using System.Net.Http;
 using WebAPI.Requests;
 
 namespace WebAPI.Controllers
@@ -32,7 +30,8 @@ namespace WebAPI.Controllers
                 return BadRequest("Missing values");
             }
 
-            var index = _blockchainService.AddTransaction(transaction.Sender, transaction.Recipient, transaction.Amount, mempool);
+            var index = _blockchainService.AddTransaction(transaction.Sender, transaction.Recipient, 
+                transaction.Amount, mempool);
             return Ok(new { message = $"Transaction will be added to Block {index}" });
         }
 

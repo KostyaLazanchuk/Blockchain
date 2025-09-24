@@ -9,16 +9,19 @@ namespace Blockchain.Core.Services
         private readonly IHashService _hash;
         private readonly IProofOfWork _pow;
         private readonly IBlockRepository _block;
+        private readonly IMerkleService _merkle;
 
-        private readonly HashSet<string> _nodes = new(StringComparer.OrdinalIgnoreCase);
-        public IReadOnlyCollection<string> Nodes => _nodes;
-
-        public BlockchainService(IHashService hash, IProofOfWork pow, IBlockRepository block)
+        public BlockchainService(IHashService hash, IProofOfWork pow,
+            IBlockRepository block, IMerkleService merkle)
         {
             _hash = hash;
             _pow = pow;
             _block = block;
+            _merkle = merkle;
         }
+
+        private readonly HashSet<string> _nodes = new(StringComparer.OrdinalIgnoreCase);
+        public IReadOnlyCollection<string> Nodes => _nodes;
 
         public IReadOnlyList<Block> Chain => _block.GetChain();
         public Block Last => _block.GetLast();
@@ -51,14 +54,17 @@ namespace Blockchain.Core.Services
         public Block CreateBlock(int proof, List<Transaction> mempool)
         {
             var last = _block.GetLast();
+            var markleRoot = _merkle.ComputeMerkleRoot(mempool);
+
             var block = new Block
             {
                 Index = last.Index + 1,
                 Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                 Transactions = mempool.ToList(),
                 Proof = proof,
-                PreviousHash= _hash.CoputeHex(last.ToCanonical()),
-                Nonce = null
+                PreviousHash= _hash.ComputeHex(last.ToCanonical()),
+                Nonce = null,
+                MerkleRoot = markleRoot,
             };
 
             _block.Append(block);
@@ -66,7 +72,7 @@ namespace Blockchain.Core.Services
             return block;
         }
 
-        public string Hash(Block block) => _hash.CoputeHex(block.ToCanonical());
+        public string Hash(Block block) => _hash.ComputeHex(block.ToCanonical());
 
         public void RegisterNode(string address)
         {
@@ -94,7 +100,7 @@ namespace Blockchain.Core.Services
                 var prev = chain[i - 1];
                 var curr = chain[i];
 
-                var prevHash = _hash.CoputeHex(prev.ToCanonical());
+                var prevHash = _hash.ComputeHex(prev.ToCanonical());
                 if (!string.Equals(curr.PreviousHash, prevHash, StringComparison.OrdinalIgnoreCase))
                     return false;
 

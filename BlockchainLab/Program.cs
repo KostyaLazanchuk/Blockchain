@@ -17,7 +17,7 @@ bc.CreateGenesis(SURNAME, DOB);
 var mempool = new List<Transaction>();
 
 bc.AddTransaction("Alice", "Bob", 10, mempool);
-bc.AddTransaction("MinerReward", "You", 1, mempool);
+bc.AddTransaction("MinerReward", "Kostya", 1, mempool);
 
 var proof = bc.MineNextProof();
 var newBlock = bc.CreateBlock(proof, mempool);
@@ -26,7 +26,7 @@ PrintBlock(bc.Chain[0], bc.Hash(bc.Chain[0]), "== Genesis-block ==");
 PrintBlock(newBlock, bc.Hash(newBlock), "\n== New block after PoW ==");
 
 var lastProof = bc.Chain[0].Proof;
-var checkHex = hash.CoputeHex($"{lastProof}{proof}");
+var checkHex = hash.ComputeHex($"{lastProof}{proof}");
 Console.WriteLine($"\nPoW check: sha256(\"{lastProof}{proof}\") = {checkHex}");
 Console.WriteLine($"endswith(\"{MONTH}\") = {checkHex.EndsWith(MONTH, StringComparison.Ordinal)}");
 
