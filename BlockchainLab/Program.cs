@@ -9,8 +9,9 @@ var MONTH = "03";
 
 IHashService hash = new HashService();
 IProofOfWork pow = new ProofOfWorkService(hash, MONTH);
+IMerkleService merkle = new MerkleService(hash);
 var repo = new BlockService();
-var bc = new BlockchainService(hash, pow, repo);
+var bc = new BlockchainService(hash, pow, repo, merkle);
 
 bc.CreateGenesis(SURNAME, DOB);
 
