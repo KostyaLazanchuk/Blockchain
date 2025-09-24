@@ -23,7 +23,7 @@ namespace Blockchain.Core.Infrastructure
         public bool IsValid(int lastProof, int proof)
         {
             var guess = $"{lastProof}{proof}";
-            var hex = _hash.CoputeHex(guess);
+            var hex = _hash.ComputeHex(guess);
             return hex.EndsWith(_suffix, StringComparison.Ordinal);
         }
     }

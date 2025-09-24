@@ -8,6 +8,6 @@ namespace Blockchain.Core.Interfaces
 {
     public interface IHashService
     {
-        string CoputeHex(string input);
+        string ComputeHex(string input);
     }
 }

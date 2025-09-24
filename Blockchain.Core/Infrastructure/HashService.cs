@@ -6,7 +6,7 @@ namespace Blockchain.Core.Infrastructure
 {
     public sealed class HashService : IHashService
     {
-        public string CoputeHex(string input)
+        public string ComputeHex(string input)
         {
             var sha = SHA256.Create();
             var bytes = sha.ComputeHash(Encoding.UTF8.GetBytes(input));

@@ -8,6 +8,7 @@
         public int Proof { get; set; }
         public string PreviousHash { get; init; } = string.Empty;
         public string? Nonce { get; init; }
+        public string MerkleRoot { get; init; } = string.Empty;
 
         public string ToCanonical()
         {

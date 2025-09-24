@@ -4,6 +4,9 @@ using Blockchain.Core.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddSingleton<IHashService, HashService>();
+builder.Services.AddSingleton<IBlockRepository, BlockService>();
+builder.Services.AddSingleton<IMerkleService, MerkleService>();
+builder.Services.AddSingleton<BlockchainService>();
 
 var powSuffix = builder.Configuration["Pow:TargetSuffix"] ?? "03";
 
@@ -13,10 +16,6 @@ builder.Services.AddSingleton<IProofOfWork>(sp =>
     return new ProofOfWorkService(hashService, powSuffix);
 });
 
-builder.Services.AddSingleton<IBlockRepository, BlockService>();
-
-
-builder.Services.AddSingleton<BlockchainService>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
