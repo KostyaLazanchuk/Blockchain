@@ -40,7 +40,7 @@ namespace WebAPI.Controllers
         {
             var proof = _blockchainService.MineNextProof();
 
-            _blockchainService.AddTransaction("0", nodeIdentifier, 1, mempool);
+            _blockchainService.AddTransaction("0", nodeIdentifier, 3, mempool);
 
             var block = _blockchainService.CreateBlock(proof, mempool);
 
